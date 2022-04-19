@@ -1,0 +1,235 @@
+Option Explicit
+
+Public Sub MyFileprojectTF()
+
+    Dim StartPath, myName, BasePath, SubPath, QRCodePath As String
+   
+
+    'Sets base path and folder paths
+    BasePath = Environ("USERPROFILE") & "\Documents\Temp\"
+    SubPath = "ACSD1\"
+    QRCodePath = "QRCodes\"
+    StartPath = Environ("USERPROFILE") & "\Documents\Temp\"
+    
+    'Check to see if paths exist
+    If Dir(BasePath, vbDirectory) = "" Then
+        MkDir BasePath
+    End If
+    
+    If Dir(BasePath & SubPath, vbDirectory) = "" Then
+        MkDir BasePath & SubPath
+    End If
+    
+    If Dir(BasePath & SubPath & QRCodePath, vbDirectory) = "" Then
+        MkDir BasePath & SubPath & QRCodePath
+    End If
+    
+    'Create folders
+    Range("K2").Select
+    Do Until IsEmpty(ActiveCell)
+
+        'myName = ActiveSheet.Range("K2").Text        ' Change as required to cell holding the folder title
+        myName = ActiveCell.Text
+        'If myName = vbNullString Then myName = "Testing"
+    
+        Dim folderPathWithName As String
+        folderPathWithName = StartPath & myName
+    
+'        If Dir(folderPathWithName, vbDirectory) = vbNullString Then
+            MkDir folderPathWithName
+'        Else
+'           MsgBox "Folder already exists"
+'           Exit Sub
+'        End If
+        ActiveCell.Offset(1, 0).Select
+    Loop
+
+End Sub
+
+'Sub setQR()
+''Updated by Extendoffice 2018/8/22
+'    Dim xSRg As Range
+'    Dim xRRg As Range
+'    Dim xObjOLE As OLEObject
+'
+'
+'    On Error Resume Next
+'        Range("H2").Select
+'        Do Until IsEmpty(ActiveCell)
+'            Set xSRg = Application.InputBox("Please select the cell you will create QR code based on", "Kutools for Excel", , , , , , 8)
+'            'Set xSRg = ActiveCell.Text 'Application.InputBox("Please select the cell you will create QR code based on", "Kutools for Excel", , , , , , 8)
+'            'If xSRg Is Nothing Then Exit Sub
+'            Set xRRg = Application.InputBox("Select a cell to place the QR code", "Kutools for Excel", , , , , , 8)
+'            'Set xRRg = ActiveCell.Offset(0, 1).Select 'Application.InputBox("Select a cell to place the QR code", "Kutools for Excel", , , , , , 8)
+'            'If xRRg Is Nothing Then Exit Sub
+'            Application.ScreenUpdating = False
+'                Set xObjOLE = ActiveSheet.OLEObjects.Add("BARCODE.BarCodeCtrl.1")
+'                xObjOLE.Object.Style = 11
+'                xObjOLE.Object.Value = xSRg.Text
+'                ActiveSheet.Shapes.Item(xObjOLE.Name).Copy
+'                ActiveSheet.Paste xRRg
+'                xObjOLE.Delete
+'            Application.ScreenUpdating = True
+''                If SingleLine > Range.InLineShapes.Count > 0 Then
+''                    Dim shp4 As InlineShape
+''                    Dim image As Object
+''                    Set shp4 = SingleLine.Range.InLineShapes(1)
+''                    shp4.Select
+''                    Selection.Copy
+''                    image = Clipboard.GetImage
+''                    image.Save ("C:\Users\shime\Documents\Temp\ACSD1\QRCodes\M_Prescott" + ".jpg")
+''                End If
+'            ActiveCell.Offset(0, -1).Select
+'            ActiveCell.Offset(1, 0).Select
+'        Loop
+'End Sub
+
+
+Option Explicit
+'other technical specifications about google chart API:
+'https://developers.google.com/chart/infographics/docs/qr_codes
+
+Function URL_QRCode_SERIES( _
+    ByVal PictureName As String, _
+    ByVal QR_Value As String, _
+    Optional ByVal PictureSize As Long = 150, _
+    Optional ByVal DisplayText As String = "", _
+    Optional ByVal Updateable As Boolean = True) As Variant
+
+Dim oPic As Shape, oRng As Excel.Range
+Dim vLeft As Variant, vTop As Variant
+Dim sURL As String
+
+Const sRootURL As String = "https://chart.googleapis.com/chart?"
+Const sSizeParameter As String = "chs="
+Const sTypeChart As String = "cht=qr"
+Const sDataParameter As String = "chl="
+Const sJoinCHR As String = "&"
+
+If Updateable = False Then
+    URL_QRCode_SERIES = "outdated"
+    Exit Function
+End If
+
+Set oRng = Application.Caller.Offset(, 1)
+On Error Resume Next
+Set oPic = oRng.Parent.Shapes(PictureName)
+If Err Then
+    Err.Clear
+    vLeft = oRng.Left + 4
+    vTop = oRng.Top
+Else
+    vLeft = oPic.Left
+    vTop = oPic.Top
+    PictureSize = Int(oPic.Width)
+    oPic.Delete
+End If
+On Error GoTo 0
+
+If Len(QR_Value) = 0 Then
+    URL_QRCode_SERIES = CVErr(xlErrValue)
+    Exit Function
+End If
+
+sURL = sRootURL & _
+       sSizeParameter & PictureSize & "x" & PictureSize & sJoinCHR & _
+       sTypeChart & sJoinCHR & _
+       sDataParameter & UTF8_URL_Encode(VBA.Replace(QR_Value, " ", "+"))
+
+Set oPic = oRng.Parent.Shapes.AddPicture(sURL, True, True, vLeft, vTop, PictureSize, PictureSize)
+oPic.Name = PictureName
+URL_QRCode_SERIES = DisplayText
+End Function
+
+
+Function UTF8_URL_Encode(ByVal sStr As String)
+    'http://www.nonhostile.com/howto-convert-byte-array-utf8-string-vb6.asp
+    Dim i As Long
+    Dim a As Long
+    Dim res As String
+    Dim code As String
+   
+    res = ""
+    For i = 1 To Len(sStr)
+        a = AscW(Mid(sStr, i, 1))
+        If a < 128 Then
+            code = Mid(sStr, i, 1)
+        ElseIf ((a > 127) And (a < 2048)) Then
+            code = URLEncodeByte(((a \ 64) Or 192))
+            code = code & URLEncodeByte(((a And 63) Or 128))
+        Else
+            code = URLEncodeByte(((a \ 144) Or 234))
+            code = code & URLEncodeByte((((a \ 64) And 63) Or 128))
+            code = code & URLEncodeByte(((a And 63) Or 128))
+        End If
+        res = res & code
+    Next i
+    UTF8_URL_Encode = res
+End Function
+
+
+Private Function URLEncodeByte(val As Integer) As String
+    Dim res As String
+    res = "%" & Right("0" & Hex(val), 2)
+    URLEncodeByte = res
+End Function
+
+Option Explicit
+
+Sub SearchFiles()
+    Dim ws                      As Worksheet
+    Dim tbl                     As ListObject
+    Dim cel                     As Range
+    Dim rootFolder              As String
+    Dim strNameNewSubFolder     As String
+    Dim fso                     As FileSystemObject
+    Dim newFolder               As Folder
+    Dim fil                     As File
+    Dim strFilepath             As String
+    Dim newFilePath             As String
+
+    'Set fso = CreateObject("Scripting.FileSystemObject")
+    Set fso = New FileSystemObject
+    Set ws = Worksheets("QRCode")
+    Set tbl = ws.ListObjects(1)
+
+    'Path of the Source folder with files
+    rootFolder = Environ("USERPROFILE") & "\Documents\Temp\ACSD1\QRCodes\"
+    
+    If Not fso.FolderExists(rootFolder) Then
+        MsgBox rootFolder & " doesn't exist.", vbExclamation, "Source Folder Not Found!"
+        Exit Sub
+    End If
+
+'files that are found in the Source Folder would be copied to this New Sub-Folder
+'Change the name of the Sub-Folder as per your requirement
+strNameNewSubFolder = Range("L2")
+
+    If Right(rootFolder, 1) <> "/" Then rootFolder = rootFolder & "/"
+    
+            If Not fso.FolderExists(rootFolder & strNameNewSubFolder) Then
+                fso.CreateFolder rootFolder & strNameNewSubFolder
+            End If
+        
+        Set newFolder = fso.GetFolder(rootFolder & strNameNewSubFolder)
+        
+        tbl.DataBodyRange.Columns(10).Interior.ColorIndex = xlNone
+        
+        For Each cel In tbl.DataBodyRange.Columns(10).Cells
+            strFilepath = rootFolder & cel.Value
+            newFilePath = newFolder.Path & "/" & cel.Value
+            If fso.FileExists(strFilepath) Then
+                cel.Interior.Color = vbYellow
+                Set fil = fso.GetFile(strFilepath)
+                'The following line will copy the file found to the newly created Sub-Folder
+                fil.Copy newFilePath
+    End If
+    
+Next cel
+
+Set fso = Nothing
+
+End Sub
+
+
+
